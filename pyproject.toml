@@ -28,4 +28,4 @@ packages = [{include = "orion"}]
 
 [tool.poetry.build]
 generate-setup-file = true
-script = "tools/build_lattigo.py"
+script = "tools/build_setup.py"

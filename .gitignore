@@ -8,9 +8,13 @@
 *.py[cod]
 *$py.class
 
-# C extensions
-*.so
-*.h
+# # C extensions
+# *.so
+# *.h
+
+# lattigo C extentions
+lattigo-linux.h
+lattigo-linux.so
 
 # Distribution / packaging
 .Python

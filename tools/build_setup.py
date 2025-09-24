@@ -4,7 +4,7 @@ import platform
 import subprocess
 from pathlib import Path
 
-def build(setup_kwargs=None):
+def build_lattigo(root_dir):
     """Build the Go shared library for Lattigo and OpenFHE."""
     print("=== Building Go shared library ===")
 
@@ -22,12 +22,8 @@ def build(setup_kwargs=None):
         raise RuntimeError("Unsupported platform")
 
     # Set up paths
-    root_dir = Path(__file__).parent.parent
     lattigo_backend_dir = root_dir / "orion" / "backend" / "lattigo"
     lattigo_output_path = lattigo_backend_dir / output_file
-    openfhe_backend_dir = root_dir / "orion" / "backend" / "openfhe"
-    openfhe_build_dir = openfhe_backend_dir / "build"
-    openfhe_cmake_prefix = root_dir / "openfhe-development"
 
     # Set up CGO for Go build
     env = os.environ.copy()
@@ -58,16 +54,79 @@ def build(setup_kwargs=None):
         print(f"Go build failed with exit code {e.returncode}")
         sys.exit(1)
 
-    try:
-        cmake_cmd = ["cmake", "..", str(openfhe_cmake_prefix)]
-        print(f"Running: {' '.join(cmake_cmd)}")
-        subprocess.run(cmake_cmd, cwd=str(openfhe_build_dir), check=True)
-    except subprocess.CalledProcessError as e:
-        print(f"OpenFHE build failed with exit code {e.returncode}")
+
+def build_openfhe(root_dir):
+    """Builds the OpenFHE C++ library using CMake and Make."""
+    print("\n=== Building OpenFHE C++ library ===")
+    
+    # 1. Set up paths for OpenFHE
+    openfhe_source_dir = root_dir / "orion" / "backend" / "openfhe" / "openfhe-development"
+    openfhe_build_dir = openfhe_source_dir / "build"
+    openfhe_install_dir = openfhe_source_dir / ".." / "install" # Local install directory
+
+    # Check if the source directory exists
+    if not openfhe_source_dir.is_dir():
+        print(f"OpenFHE source directory not found: {openfhe_source_dir}")
+        print("Please ensure the OpenFHE submodule is initialized and at the correct path.")
         sys.exit(1)
+
+    openfhe_build_dir.mkdir(exist_ok=True)
+
+    # 2. CMake configuration
+    env = os.environ.copy()
+
+    cmake_configure_cmd = [
+        "cmake",
+        "..",
+        f"-DCMAKE_INSTALL_PREFIX={openfhe_install_dir}",
+        "-DBUILD_EXAMPLES=OFF",
+        "-DBUILD_UNITTESTS=OFF",
+        "-DBUILD_BENCHMARKS=OFF",
+        "-DBUILD_EXTRAS=OFF",
+        "-DNATIVE_SIZE=64",     # default: 64
+        "-DCKKS_M_FACTOR=1"     # default: 1
+    ]
+    try:
+        print(f"Running CMake configure for OpenFHE: {' '.join(str(c) for c in cmake_configure_cmd)}")
+        subprocess.run(cmake_configure_cmd, cwd=str(openfhe_build_dir), env=env, check=True, capture_output=True, text=True)
+        print("OpenFHE CMake configuration successful.")
+    except subprocess.CalledProcessError as e:
+        print(f"OpenFHE CMake configure failed with exit code {e.returncode}")
+
+    # 2. Make build
+    make_build_cmd = [
+        "make",
+        "-j", str(os.cpu_count() or 2)
+    ]
+    try:
+        print(f"Running CMake configure for OpenFHE: {' '.join(str(c) for c in make_build_cmd)}")
+        subprocess.run(make_build_cmd, cwd=str(openfhe_build_dir), env=env, check=True, capture_output=True, text=True)
+        print("OpenFHE CMake configuration successful.")
+    except subprocess.CalledProcessError as e:
+        print(f"OpenFHE CMake configure failed with exit code {e.returncode}")
+        sys.exit(1)
+
+    # 3. Make install
+    make_install_cmd = [
+        "make",
+        "install"
+    ]
+    try:
+        print(f"Running CMake configure for OpenFHE: {' '.join(str(c) for c in make_install_cmd)}")
+        subprocess.run(make_install_cmd, cwd=str(openfhe_build_dir), env=env, check=True, capture_output=True, text=True)
+        print("OpenFHE CMake configuration successful.")
+    except subprocess.CalledProcessError as e:
+        print(f"OpenFHE CMake configure failed with exit code {e.returncode}")
+        sys.exit(1)
+
+def build(setup_kwargs=None):
+    root_dir = Path(__file__).parent.parent
+    build_openfhe(root_dir)
+    build_lattigo(root_dir)
 
     # Return setup_kwargs for Poetry
     return setup_kwargs or {}
+
 
 if __name__ == "__main__":
     success = build()

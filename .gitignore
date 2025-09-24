@@ -17,6 +17,7 @@ lattigo-linux.h
 lattigo-linux.so
 
 # Distribution / packaging
+install/
 .Python
 build/
 develop-eggs/

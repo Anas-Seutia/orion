@@ -1,0 +1,3 @@
+[submodule "orion/backend/openfhe/openfhe-development"]
+	path = orion/backend/openfhe/openfhe-development
+	url = https://github.com/openfheorg/openfhe-development.git

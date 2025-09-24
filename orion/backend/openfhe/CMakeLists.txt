@@ -1,59 +1,79 @@
-cmake_minimum_required(VERSION 3.16.3)
+cmake_minimum_required(VERSION 3.10)
+project(OrionOpenFHE)
 
-### To use gcc/g++ on a Macintosh, you must set the Compilers
-### here, not inside the project
-##if(APPLE)
-##       set(CMAKE_C_COMPILER "/usr/local/bin/gcc-7")
-##       set(CMAKE_CXX_COMPILER "/usr/local/bin/g++-7")
-##endif()
-### TODO: for now, we use CLang for Mac
-###
-### In order to create OpenFHE's static libraries you should enable
-### the BUILD_STATIC option. For that, you run "cmake .. -DBUILD_STATIC=ON".
-### After having your link completed you will find static libs
-### with the suffix "_static" in ./build/libs/.
-### Examples: OPENFHEpke_static.a, OPENFHEcore_static.a, etc.
-### After you run "make install" in your build directory, you can build your custom application.
-### If you need your application to be linked statically, then run "cmake .. -DBUILD_STATIC=ON"
-
-project(demo CXX)
+# Set C++ standard
 set(CMAKE_CXX_STANDARD 17)
-option(BUILD_STATIC "Set to ON to include static versions of the library" OFF)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(OpenFHE CONFIG REQUIRED)
+# Set local OpenFHE installation path
+set(OPENFHE_INSTALL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/install")
+set(CMAKE_PREFIX_PATH "${OPENFHE_INSTALL_DIR}")
+
+# Find OpenFHE installation
+find_package(OpenFHE REQUIRED PATHS "${OPENFHE_INSTALL_DIR}/lib/OpenFHE" NO_DEFAULT_PATH)
+
 if(OpenFHE_FOUND)
-    message(STATUS "FOUND PACKAGE OpenFHE")
-    message(STATUS "OpenFHE Version: ${BASE_OPENFHE_VERSION}")
-    message(STATUS "OpenFHE installed as shared libraries: ${OpenFHE_SHARED}")
-    message(STATUS "OpenFHE include files location: ${OpenFHE_INCLUDE}")
-    message(STATUS "OpenFHE lib files location: ${OpenFHE_LIBDIR}")
-    message(STATUS "OpenFHE Native Backend size: ${OpenFHE_NATIVE_SIZE}")
+    message(STATUS "Found OpenFHE at ${OPENFHE_INSTALL_DIR}")
+    message(STATUS "OpenFHE version: ${OpenFHE_VERSION}")
+    message(STATUS "OpenFHE include: ${OpenFHE_INCLUDE}")
+    message(STATUS "OpenFHE libraries: ${OpenFHE_SHARED_LIBRARIES}")
 else()
-    message(FATAL_ERROR "PACKAGE OpenFHE NOT FOUND")
+    message(FATAL_ERROR "OpenFHE not found in ${OPENFHE_INSTALL_DIR}")
 endif()
 
-set(CMAKE_CXX_FLAGS ${OpenFHE_CXX_FLAGS})
+# Include directories
+include_directories("${OPENFHE_INSTALL_DIR}/include")
+include_directories("${OPENFHE_INSTALL_DIR}/include/openfhe")
+include_directories("${OPENFHE_INSTALL_DIR}/include/openfhe/third-party/include")
+include_directories("${OPENFHE_INSTALL_DIR}/include/openfhe/core")
+include_directories("${OPENFHE_INSTALL_DIR}/include/openfhe/pke")
+include_directories("${OPENFHE_INSTALL_DIR}/include/openfhe/binfhe")
 
-include_directories(${OPENMP_INCLUDES})
-include_directories(${OpenFHE_INCLUDE})
-include_directories(${OpenFHE_INCLUDE}/third-party/include)
-include_directories(${OpenFHE_INCLUDE}/core)
-include_directories(${OpenFHE_INCLUDE}/pke)
-include_directories(${OpenFHE_INCLUDE}/binfhe)
-### add directories for other OpenFHE modules as needed for your project
+# Create shared library for Python bindings
+add_library(openfhe_orion SHARED orion_openfhe_scheme.cpp)
 
-link_directories(${OpenFHE_LIBDIR})
-link_directories(${OPENMP_LIBRARIES})
-if(BUILD_STATIC)
-    set(CMAKE_EXE_LINKER_FLAGS "${OpenFHE_EXE_LINKER_FLAGS} -static")
-    link_libraries(${OpenFHE_STATIC_LIBRARIES})
-else()
-    set(CMAKE_EXE_LINKER_FLAGS ${OpenFHE_EXE_LINKER_FLAGS})
-    link_libraries(${OpenFHE_SHARED_LIBRARIES})
+# Link OpenFHE libraries to our shared library
+target_link_libraries(openfhe_orion
+    "${OPENFHE_INSTALL_DIR}/lib/libOPENFHEpke.so"
+    "${OPENFHE_INSTALL_DIR}/lib/libOPENFHEbinfhe.so"
+    "${OPENFHE_INSTALL_DIR}/lib/libOPENFHEcore.so"
+)
+
+# Set properties for the shared library
+set_target_properties(openfhe_orion PROPERTIES
+    BUILD_RPATH "${OPENFHE_INSTALL_DIR}/lib"
+    INSTALL_RPATH "${OPENFHE_INSTALL_DIR}/lib"
+    POSITION_INDEPENDENT_CODE ON
+)
+
+# Enable all warnings for the library
+target_compile_options(openfhe_orion PRIVATE -Wall -Wextra)
+
+# Create executable for examples (if examples directory exists)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/examples/simple-real-numbers.cpp")
+    add_executable(simple-real-numbers examples/simple-real-numbers.cpp)
+
+    # Link libraries explicitly
+    target_link_libraries(simple-real-numbers
+        "${OPENFHE_INSTALL_DIR}/lib/libOPENFHEpke.so"
+        "${OPENFHE_INSTALL_DIR}/lib/libOPENFHEbinfhe.so"
+        "${OPENFHE_INSTALL_DIR}/lib/libOPENFHEcore.so"
+    )
+
+    # Set runtime path for shared libraries
+    set_target_properties(simple-real-numbers PROPERTIES
+        BUILD_RPATH "${OPENFHE_INSTALL_DIR}/lib"
+        INSTALL_RPATH "${OPENFHE_INSTALL_DIR}/lib"
+    )
+
+    # Enable all warnings
+    target_compile_options(simple-real-numbers PRIVATE -Wall -Wextra)
+
+    # Add build target
+    add_custom_target(run-simple-real-numbers
+        COMMAND simple-real-numbers
+        DEPENDS simple-real-numbers
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+        COMMENT "Running simple-real-numbers example"
+    )
 endif()
-
-### ADD YOUR EXECUTABLE(s) HERE
-### add_executable(EXECUTABLE-NAME SOURCES)
-###
-### EXAMPLE:
-### add_executable(test demo-simple-example.cpp)

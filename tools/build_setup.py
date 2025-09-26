@@ -92,6 +92,7 @@ def build_openfhe(root_dir):
         print("OpenFHE CMake configuration successful.")
     except subprocess.CalledProcessError as e:
         print(f"OpenFHE CMake configure failed with exit code {e.returncode}")
+        sys.exit(1)
 
     # 2. Make build
     make_build_cmd = [
@@ -99,11 +100,11 @@ def build_openfhe(root_dir):
         "-j", str(os.cpu_count() or 2)
     ]
     try:
-        print(f"Running CMake configure for OpenFHE: {' '.join(str(c) for c in make_build_cmd)}")
+        print(f"Running Make build for OpenFHE: {' '.join(str(c) for c in make_build_cmd)}")
         subprocess.run(make_build_cmd, cwd=str(openfhe_build_dir), env=env, check=True, capture_output=True, text=True)
-        print("OpenFHE CMake configuration successful.")
+        print("OpenFHE Make build successful.")
     except subprocess.CalledProcessError as e:
-        print(f"OpenFHE CMake configure failed with exit code {e.returncode}")
+        print(f"OpenFHE Make build failed with exit code {e.returncode}")
         sys.exit(1)
 
     # 3. Make install
@@ -112,11 +113,11 @@ def build_openfhe(root_dir):
         "install"
     ]
     try:
-        print(f"Running CMake configure for OpenFHE: {' '.join(str(c) for c in make_install_cmd)}")
+        print(f"Running Make install for OpenFHE: {' '.join(str(c) for c in make_install_cmd)}")
         subprocess.run(make_install_cmd, cwd=str(openfhe_build_dir), env=env, check=True, capture_output=True, text=True)
-        print("OpenFHE CMake configuration successful.")
+        print("OpenFHE Make install successful.")
     except subprocess.CalledProcessError as e:
-        print(f"OpenFHE CMake configure failed with exit code {e.returncode}")
+        print(f"OpenFHE Make install failed with exit code {e.returncode}")
         sys.exit(1)
 
 def build(setup_kwargs=None):

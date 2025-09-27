@@ -5,6 +5,11 @@
 #include <memory>
 #include <vector>
 #include <stdexcept>
+#include <algorithm>
+#include <iostream>
+#include "openfhe/pke/openfhe.h"
+
+using namespace lbcrypto;
 
 /**
  * @brief Min-heap based memory allocator for managing object lifetimes with integer IDs
@@ -124,18 +129,27 @@ public:
 
     /**
      * @brief Get all live (allocated) IDs
-     * 
+     *
      * @return std::vector<int> Vector of all currently allocated IDs
      */
     std::vector<int> GetLiveKeys() const {
         std::vector<int> keys;
         keys.reserve(objectMap.size());
-        
+
         for (const auto& pair : objectMap) {
             keys.push_back(pair.first);
         }
-        
+
         return keys;
+    }
+
+    /**
+     * @brief Get all active (allocated) IDs - alias for GetLiveKeys()
+     *
+     * @return std::vector<int> Vector of all currently allocated IDs
+     */
+    std::vector<int> GetActiveIDs() const {
+        return GetLiveKeys();
     }
 
     /**
@@ -161,9 +175,64 @@ public:
     }
 
     /**
+     * @brief Print debug information about this allocator
+     */
+    template<typename T>
+    void DebugPrint() const;
+
+    /**
      * @brief Destructor - automatically cleans up all stored objects
      */
     ~HeapAllocator() {
         Reset();
     }
 };
+
+// Global heap allocators
+extern HeapAllocator g_ptHeap;   // Plaintext heap
+extern HeapAllocator g_ctHeap;   // Ciphertext heap
+extern HeapAllocator g_ltHeap;   // Linear transform heap
+
+// Utility functions
+void PrintHeapStats();
+void ResetAllHeaps();
+size_t GetTotalAllocatedObjects();
+std::vector<int> GetAllPlaintextIDs();
+std::vector<int> GetAllCiphertextIDs();
+std::vector<int> GetAllLinearTransformIDs();
+void CleanupExpiredObjects();
+
+// Memory monitoring
+void UpdateMemoryPeaks();
+void PrintPeakMemoryUsage();
+void ResetMemoryPeaks();
+
+// Tensor heap operations (moved from tensors.hpp)
+int PushPlaintext(const Plaintext& plaintext);
+Plaintext& RetrievePlaintext(int plaintextID);
+std::shared_ptr<Plaintext> GetPlaintextPtr(int plaintextID);
+bool PlaintextExists(int plaintextID);
+bool DeletePlaintext(int plaintextID);
+
+int PushCiphertext(const Ciphertext<DCRTPoly>& ciphertext);
+Ciphertext<DCRTPoly>& RetrieveCiphertext(int ciphertextID);
+std::shared_ptr<Ciphertext<DCRTPoly>> GetCiphertextPtr(int ciphertextID);
+bool CiphertextExists(int ciphertextID);
+bool DeleteCiphertext(int ciphertextID);
+
+void ResetTensorHeaps();
+void GetTensorStats(size_t& plaintextCount, size_t& ciphertextCount);
+
+// C interface
+extern "C" {
+    void PrintHeapStatsC();
+    void ResetAllHeapsC();
+    size_t GetTotalAllocatedObjectsC();
+    void GetMemoryUsage(int* plaintextCount, int* ciphertextCount);
+    int* GetLivePlaintexts(int* count);
+    int* GetLiveCiphertexts(int* count);
+    void CleanupExpiredObjectsC();
+    void UpdateMemoryPeaksC();
+    void PrintPeakMemoryUsageC();
+    void ResetMemoryPeaksC();
+}

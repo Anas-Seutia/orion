@@ -207,6 +207,120 @@ void GetLinearTransformStats(size_t& transform_count);
 // C interface functions for linear transformation management
 extern "C" {
     /**
+     * @brief Initialize linear transform evaluator (C interface) - matches Lattigo interface
+     */
+    void NewLinearTransformEvaluator();
+
+    /**
+     * @brief Generate linear transformation (C interface) - matches Lattigo interface
+     *
+     * @param diag_idxs Pointer to diagonal indices
+     * @param diag_idxs_len Number of diagonal indices
+     * @param diag_data Pointer to diagonal data
+     * @param diag_data_len Number of diagonal data elements
+     * @param level Level for the transformation
+     * @param bsgs_ratio BSGS ratio
+     * @param io_mode IO mode string
+     * @return int Transformation ID (< 0 on error)
+     */
+    int GenerateLinearTransform(const int* diag_idxs, int diag_idxs_len,
+                               const float* diag_data, int diag_data_len,
+                               int level, float bsgs_ratio, const char* io_mode);
+
+    /**
+     * @brief Apply linear transformation to a ciphertext (C interface) - matches Lattigo interface
+     *
+     * @param ciphertext_id ID of the input ciphertext
+     * @param transform_id ID of the transformation
+     * @return int ID of the resulting ciphertext (< 0 on error)
+     */
+    int EvaluateLinearTransform(int ciphertext_id, int transform_id);
+
+    /**
+     * @brief Get required rotation keys for linear transformation (C interface)
+     *
+     * @param transform_id ID of the transformation
+     * @param rotation_keys_out Output buffer for rotation key values
+     * @param max_keys Maximum number of keys to return
+     * @return int Number of rotation keys required (< 0 on error)
+     */
+    int GetLinearTransformRotationKeys(int transform_id, int* rotation_keys_out, size_t max_keys);
+
+    // Lattigo-compatible version that returns ArrayResult
+    struct ArrayResultInt {
+        int* data;
+        size_t length;
+    };
+    ArrayResultInt* GetLinearTransformRotationKeysArray(int transform_id);
+
+    // Lattigo-compatible byte array result
+    struct ArrayResultByte {
+        char* Data;
+        size_t Length;
+    };
+
+    /**
+     * @brief Generate specific rotation key for linear transformation (C interface)
+     *
+     * @param rotation_amount Amount of rotation for the key
+     */
+    void GenerateLinearTransformRotationKey(int rotation_amount);
+
+    /**
+     * @brief Generate and serialize rotation key (C interface) - matches Lattigo interface
+     *
+     * @param rotation_amount Amount of rotation for the key
+     * @return Pointer to serialized key data and length (Lattigo ArrayResultByte format)
+     */
+    ArrayResultByte* GenerateAndSerializeRotationKey(int rotation_amount);
+
+    /**
+     * @brief Load rotation key from bytes (C interface)
+     *
+     * @param serialized_key Pointer to serialized key data
+     * @param key_size Size of serialized key data
+     * @param rotation_amount Rotation amount for this key
+     * @return int 0 on success, < 0 on error
+     */
+    int LoadRotationKey(const char* serialized_key, size_t key_size, int rotation_amount);
+
+    /**
+     * @brief Serialize diagonal for linear transformation (C interface)
+     *
+     * @param diagonal_data Pointer to diagonal data
+     * @param size Size of diagonal data
+     * @param serialized_out Output buffer for serialized diagonal
+     * @param max_size Maximum size of output buffer
+     * @return int Size of serialized diagonal (< 0 on error)
+     */
+    int SerializeDiagonal(const double* diagonal_data, size_t size, char* serialized_out, size_t max_size);
+
+    /**
+     * @brief Load plaintext diagonal from serialized data (C interface)
+     *
+     * @param serialized_data Pointer to serialized diagonal data
+     * @param data_size Size of serialized data
+     * @return int Plaintext ID for the loaded diagonal (< 0 on error)
+     */
+    int LoadPlaintextDiagonal(const char* serialized_data, size_t data_size);
+
+    /**
+     * @brief Remove plaintext diagonals from memory (C interface)
+     *
+     * @param diagonal_ids Array of diagonal IDs to remove
+     * @param count Number of diagonal IDs
+     */
+    void RemovePlaintextDiagonals(const int* diagonal_ids, size_t count);
+
+    /**
+     * @brief Remove rotation keys from memory (C interface)
+     *
+     * @param rotation_amounts Array of rotation amounts whose keys to remove
+     * @param count Number of rotation amounts
+     */
+    void RemoveRotationKeys(const int* rotation_amounts, size_t count);
+
+    /**
      * @brief Create a linear transformation (C interface)
      *
      * @param matrix_data Pointer to transformation matrix data (row-major order)

@@ -21,6 +21,7 @@
 #include "scheme.hpp"
 #include "encoder.hpp"
 #include "encryptor.hpp"
+#include "evaluator.hpp"
 #include "tensors.hpp"
 #include "utils.hpp"
 #include "linear_transform.hpp"
@@ -73,22 +74,6 @@ public:
     bool IsInitialized() const { return initialized; }
 
     /**
-     * @brief Encode and encrypt values to ciphertext
-     * 
-     * @param values Vector of values to encrypt
-     * @return int Ciphertext ID if successful, -1 if failed
-     */
-    int EncodeAndEncrypt(const std::vector<double>& values);
-
-    /**
-     * @brief Decrypt and decode ciphertext to values
-     * 
-     * @param ciphertextID ID of ciphertext to decrypt
-     * @return std::vector<double> Decrypted values (empty if failed)
-     */
-    std::vector<double> DecryptAndDecode(int ciphertextID);
-
-    /**
      * @brief Create a linear transformation matrix
      * 
      * @param matrix Matrix data (flattened)
@@ -113,58 +98,7 @@ public:
      */
     bool DeleteLinearTransform(int transformID);
 
-    /**
-     * @brief Homomorphic addition of two ciphertexts
-     * 
-     * @param ct1ID First ciphertext ID
-     * @param ct2ID Second ciphertext ID
-     * @return int Result ciphertext ID if successful, -1 if failed
-     */
-    int Add(int ct1ID, int ct2ID);
-
-    /**
-     * @brief Homomorphic addition of ciphertext and plaintext
-     * 
-     * @param ctID Ciphertext ID
-     * @param ptID Plaintext ID
-     * @return int Result ciphertext ID if successful, -1 if failed
-     */
-    int AddPlain(int ctID, int ptID);
-
-    /**
-     * @brief Homomorphic multiplication of two ciphertexts
-     * 
-     * @param ct1ID First ciphertext ID
-     * @param ct2ID Second ciphertext ID
-     * @return int Result ciphertext ID if successful, -1 if failed
-     */
-    int Multiply(int ct1ID, int ct2ID);
-
-    /**
-     * @brief Homomorphic multiplication of ciphertext and plaintext
-     * 
-     * @param ctID Ciphertext ID
-     * @param ptID Plaintext ID
-     * @return int Result ciphertext ID if successful, -1 if failed
-     */
-    int MultiplyPlain(int ctID, int ptID);
-
-    /**
-     * @brief Rotate ciphertext by given steps
-     * 
-     * @param ctID Ciphertext ID
-     * @param steps Number of rotation steps
-     * @return int Result ciphertext ID if successful, -1 if failed
-     */
-    int Rotate(int ctID, int steps);
-
-    /**
-     * @brief Rescale ciphertext to manage noise growth
-     * 
-     * @param ctID Ciphertext ID
-     * @return int Result ciphertext ID if successful, -1 if failed
-     */
-    int Rescale(int ctID);
+    // Evaluator functions moved to evaluator.hpp/cpp
 
     /**
      * @brief Clean up all resources
@@ -186,15 +120,9 @@ public:
     }
 };
 
-// C interface for all operations (matching the original API)
+// C interface for non-evaluator operations
 extern "C" {
-    // Homomorphic operations
-    int Add(int ct1ID, int ct2ID);
-    int AddPlain(int ctID, int ptID);
-    int Multiply(int ct1ID, int ct2ID);
-    int MultiplyPlain(int ctID, int ptID);
-    int Rotate(int ctID, int steps);
-    int Rescale(int ctID);
+    // Evaluator operations moved to evaluator.hpp
 
     // Linear transform operations
     int CreateLinearTransform(double* transform, int size);

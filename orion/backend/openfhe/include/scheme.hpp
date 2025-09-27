@@ -71,6 +71,8 @@ public:
      */
     void GeneratePowerOfTwoRotationKeys();
 
+    // Bulk rotation key generation functions removed - Orion uses individual AddRotationKey calls
+
     /**
      * @brief Check if the scheme is properly initialized
      * 

@@ -3,9 +3,8 @@
 #include "tensors.hpp"
 #include <iostream>
 
-// Global encryptor and decryptor instances
+// Global encryptor instance (handles both encryption and decryption)
 OrionEncryptor g_encryptor;
-OrionDecryptor g_decryptor;
 
 // OrionEncryptor implementation
 bool OrionEncryptor::Initialize() {
@@ -90,115 +89,14 @@ int OrionEncryptor::Decrypt(int ciphertextID) {
     }
 }
 
-int OrionEncryptor::EncryptValues(const std::vector<double>& values) {
-    if (!initialized || !g_scheme.IsInitialized()) {
-        std::cerr << "Encryptor or scheme not initialized" << std::endl;
-        return -1;
-    }
-
-    try {
-        // Create plaintext from values
-        Plaintext plaintext = g_scheme.context->MakeCKKSPackedPlaintext(values);
-        
-        // Encrypt the plaintext
-        auto ciphertext = g_scheme.context->Encrypt(g_scheme.publicKey, plaintext);
-        
-        // Store the ciphertext and return its ID
-        return PushCiphertext(ciphertext);
-
-    } catch (const std::exception& e) {
-        std::cerr << "EncryptValues failed: " << e.what() << std::endl;
-        return -1;
-    }
-}
-
-std::vector<double> OrionEncryptor::DecryptValues(int ciphertextID) {
-    if (!initialized || !g_scheme.IsInitialized()) {
-        std::cerr << "Encryptor or scheme not initialized" << std::endl;
-        return std::vector<double>();
-    }
-
-    try {
-        if (!CiphertextExists(ciphertextID)) {
-            std::cerr << "Ciphertext ID " << ciphertextID << " not found" << std::endl;
-            return std::vector<double>();
-        }
-
-        auto& ciphertext = RetrieveCiphertext(ciphertextID);
-        
-        // Decrypt the ciphertext
-        Plaintext plaintext;
-        g_scheme.context->Decrypt(g_scheme.secretKey, ciphertext, &plaintext);
-
-        // Get the values from the plaintext
-        std::vector<double> result = plaintext->GetRealPackedValue();
-        return result;
-
-    } catch (const std::exception& e) {
-        std::cerr << "DecryptValues failed: " << e.what() << std::endl;
-        return std::vector<double>();
-    }
-}
+// EncryptValues and DecryptValues functions removed - not used by Orion
+// Use Encode + Encrypt and Decrypt + Decode instead
 
 void OrionEncryptor::CleanUp() {
     initialized = false;
 }
 
-// OrionDecryptor implementation  
-bool OrionDecryptor::Initialize() {
-    if (!g_scheme.IsInitialized()) {
-        std::cerr << "Cannot initialize decryptor: scheme not initialized" << std::endl;
-        return false;
-    }
-
-    if (!g_scheme.secretKey) {
-        std::cerr << "Cannot initialize decryptor: secret key not available" << std::endl;
-        return false;
-    }
-
-    try {
-        // OpenFHE handles decryption through the CryptoContext
-        // No separate decryptor object needed - just mark as initialized
-        initialized = true;
-        return true;
-
-    } catch (const std::exception& e) {
-        std::cerr << "Decryptor initialization failed: " << e.what() << std::endl;
-        initialized = false;
-        return false;
-    }
-}
-
-int OrionDecryptor::Decrypt(int ciphertextID) {
-    if (!initialized || !g_scheme.IsInitialized()) {
-        std::cerr << "Decryptor or scheme not initialized" << std::endl;
-        return -1;
-    }
-
-    try {
-        if (!CiphertextExists(ciphertextID)) {
-            std::cerr << "Ciphertext ID " << ciphertextID << " not found" << std::endl;
-            return -1;
-        }
-
-        auto& ciphertext = RetrieveCiphertext(ciphertextID);
-        
-        // Decrypt the ciphertext using the secret key
-        Plaintext plaintext;
-        g_scheme.context->Decrypt(g_scheme.secretKey, ciphertext, &plaintext);
-
-        // Store the plaintext and return its ID
-        return PushPlaintext(plaintext);
-
-    } catch (const std::exception& e) {
-        std::cerr << "Decryption failed: " << e.what() << std::endl;
-        return -1;
-    }
-}
-
-void OrionDecryptor::CleanUp() {
-    initialized = false;
-}
+// OrionDecryptor class removed - functionality merged into OrionEncryptor
 
 // C interface implementations
 extern "C" {
@@ -207,7 +105,8 @@ extern "C" {
     }
 
     void NewDecryptor() {
-        g_decryptor.Initialize();
+        // Decryptor functionality handled by encryptor
+        g_encryptor.Initialize();
     }
 
     int Encrypt(int plaintextID) {
@@ -215,6 +114,6 @@ extern "C" {
     }
 
     int Decrypt(int ciphertextID) {
-        return g_decryptor.Decrypt(ciphertextID);
+        return g_encryptor.Decrypt(ciphertextID);
     }
 }

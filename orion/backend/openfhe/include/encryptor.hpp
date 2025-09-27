@@ -51,21 +51,8 @@ public:
      */
     int Decrypt(int ciphertextID);
 
-    /**
-     * @brief Encrypt values directly (encode then encrypt)
-     * 
-     * @param values Vector of values to encrypt
-     * @return int Ciphertext ID if successful, -1 if failed
-     */
-    int EncryptValues(const std::vector<double>& values);
-
-    /**
-     * @brief Decrypt and decode ciphertext to values
-     * 
-     * @param ciphertextID ID of the ciphertext to decrypt and decode
-     * @return std::vector<double> Decrypted values (empty if failed)
-     */
-    std::vector<double> DecryptValues(int ciphertextID);
+    // EncryptValues and DecryptValues functions removed - not used by Orion
+    // Use Encode + Encrypt and Decrypt + Decode instead
 
     /**
      * @brief Clean up encryptor resources
@@ -80,60 +67,10 @@ public:
     }
 };
 
-/**
- * @brief OpenFHE Decryptor wrapper (separate from encryptor in some contexts)
- * 
- * In OpenFHE, decryption uses the secret key while encryption uses the public key.
- * This class provides a separate interface for decryption operations.
- */
-class OrionDecryptor {
-private:
-    bool initialized;
+// OrionDecryptor class removed - functionality merged into OrionEncryptor
 
-public:
-    /**
-     * @brief Construct a new Orion Decryptor object
-     */
-    OrionDecryptor() : initialized(false) {}
-
-    /**
-     * @brief Initialize the decryptor with the current scheme
-     * 
-     * @return true if initialization successful, false otherwise
-     */
-    bool Initialize();
-
-    /**
-     * @brief Check if decryptor is initialized
-     * 
-     * @return true if initialized, false otherwise
-     */
-    bool IsInitialized() const { return initialized; }
-
-    /**
-     * @brief Decrypt a ciphertext to produce a plaintext
-     * 
-     * @param ciphertextID ID of the ciphertext to decrypt
-     * @return int Plaintext ID if successful, -1 if failed
-     */
-    int Decrypt(int ciphertextID);
-
-    /**
-     * @brief Clean up decryptor resources
-     */
-    void CleanUp();
-
-    /**
-     * @brief Destructor - ensures proper cleanup  
-     */
-    ~OrionDecryptor() {
-        CleanUp();
-    }
-};
-
-// Global encryptor and decryptor instances
+// Global encryptor instance (handles both encryption and decryption)
 extern OrionEncryptor g_encryptor;
-extern OrionDecryptor g_decryptor;
 
 // C interface functions for encryption operations
 extern "C" {

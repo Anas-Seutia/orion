@@ -27,7 +27,8 @@ bool OrionScheme::Initialize(int logN, const std::vector<int>& logQ, const std::
         parameters.SetScalingModSize(scaleModSize);
 
         // Set security level
-        parameters.SetSecurityLevel(HEStd_128_classic);
+        // parameters.SetSecurityLevel(HEStd_128_classic);
+        parameters.SetSecurityLevel(HEStd_NotSet);
 
         // Set secret key distribution based on Hamming weight
         if (hammingWeight > 0) {
@@ -150,6 +151,8 @@ void OrionScheme::GeneratePowerOfTwoRotationKeys() {
         std::cerr << "Power-of-two rotation key generation failed: " << e.what() << std::endl;
     }
 }
+
+// Bulk rotation key generation functions removed - Orion uses individual AddRotationKey calls
 
 void OrionScheme::CleanUp() {
     if (initialized) {

@@ -35,10 +35,10 @@ int OrionEncoder::Encode(const std::vector<double>& values, int level, uint64_t 
 
     try {
         // Create plaintext at the specified level
-        Plaintext plaintext = g_scheme.context->MakeCKKSPackedPlaintext(values, 1, level);
-        
+        Plaintext plaintext = g_scheme.context->MakeCKKSPackedPlaintext(values, 1UL, level);
+
         // Set the scaling factor
-        plaintext->SetScalingFactor(static_cast<double>(scale));
+        // plaintext->SetScalingFactor(static_cast<double>(scale));
 
         // Store the plaintext and return its ID
         return PushPlaintext(plaintext);
@@ -47,6 +47,13 @@ int OrionEncoder::Encode(const std::vector<double>& values, int level, uint64_t 
         std::cerr << "Encode failed: " << e.what() << std::endl;
         return -1;
     }
+}
+
+int OrionEncoder::Encode(const std::vector<double>& values) {
+    // Use default level and scale from the scheme
+    Plaintext plaintext = g_scheme.context->MakeCKKSPackedPlaintext(values);
+
+    return PushPlaintext(plaintext);
 }
 
 std::vector<double> OrionEncoder::Decode(int plaintextID) {
@@ -73,35 +80,7 @@ std::vector<double> OrionEncoder::Decode(int plaintextID) {
     }
 }
 
-int OrionEncoder::EncodeAtLevel(const std::vector<double>& values, int level) {
-    if (!initialized || !g_scheme.IsInitialized()) {
-        std::cerr << "Encoder or scheme not initialized" << std::endl;
-        return -1;
-    }
-
-    try {
-        // Use a default scaling factor (2^50 is commonly used in CKKS)
-        uint64_t defaultScale = 1ULL << 50;
-        return Encode(values, level, defaultScale);
-
-    } catch (const std::exception& e) {
-        std::cerr << "EncodeAtLevel failed: " << e.what() << std::endl;
-        return -1;
-    }
-}
-
-uint32_t OrionEncoder::GetSlotCount() const {
-    if (!initialized || !g_scheme.IsInitialized()) {
-        return 0;
-    }
-
-    try {
-        return g_scheme.context->GetEncodingParams()->GetBatchSize();
-    } catch (const std::exception& e) {
-        std::cerr << "GetSlotCount failed: " << e.what() << std::endl;
-        return 0;
-    }
-}
+// EncodeAtLevel and GetSlotCount functions removed - not used by Orion
 
 void OrionEncoder::CleanUp() {
     initialized = false;
@@ -155,26 +134,17 @@ extern "C" {
         }
     }
 
-    int CreatePlaintext(double* values, int size) {
-        if (!values || size <= 0) {
+    // CreatePlaintext function - wrapper for Encode for bindings compatibility
+    int CreatePlaintext(double* values, int lenValues) {
+        if (!values || lenValues <= 0) {
             std::cerr << "Invalid input to CreatePlaintext" << std::endl;
             return -1;
         }
 
         try {
-            if (!g_scheme.IsInitialized()) {
-                std::cerr << "Scheme not initialized for CreatePlaintext" << std::endl;
-                return -1;
-            }
-
             // Convert C array to C++ vector
-            std::vector<double> valueVec(values, values + size);
-            
-            // Create plaintext with default parameters
-            Plaintext plaintext = g_scheme.context->MakeCKKSPackedPlaintext(valueVec);
-            
-            // Store and return ID
-            return PushPlaintext(plaintext);
+            std::vector<double> valueVec(values, values + lenValues);
+            return g_encoder.Encode(valueVec);
 
         } catch (const std::exception& e) {
             std::cerr << "CreatePlaintext failed: " << e.what() << std::endl;

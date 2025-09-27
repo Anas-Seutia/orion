@@ -38,13 +38,21 @@ public:
 
     /**
      * @brief Encode a vector of real values into a plaintext
-     * 
+     *
      * @param values Vector of real values to encode
      * @param level Target level for the plaintext
      * @param scale Scaling factor for the encoding
      * @return int Plaintext ID if successful, -1 if failed
      */
     int Encode(const std::vector<double>& values, int level, uint64_t scale);
+
+    /**
+     * @brief Encode a vector of real values into a plaintext with default parameters
+     *
+     * @param values Vector of real values to encode
+     * @return int Plaintext ID if successful, -1 if failed
+     */
+    int Encode(const std::vector<double>& values);
 
     /**
      * @brief Decode a plaintext into a vector of real values
@@ -54,21 +62,7 @@ public:
      */
     std::vector<double> Decode(int plaintextID);
 
-    /**
-     * @brief Encode values with automatic scale determination
-     * 
-     * @param values Vector of values to encode
-     * @param level Target level
-     * @return int Plaintext ID if successful, -1 if failed
-     */
-    int EncodeAtLevel(const std::vector<double>& values, int level);
-
-    /**
-     * @brief Get the maximum number of slots that can be encoded
-     * 
-     * @return uint32_t Maximum slot count
-     */
-    uint32_t GetSlotCount() const;
+    // EncodeAtLevel and GetSlotCount functions removed - not used by Orion
 
     /**
      * @brief Clean up encoder resources
@@ -115,11 +109,11 @@ extern "C" {
     int Decode(int plaintextID, double* output, int maxSize);
 
     /**
-     * @brief Create plaintext from values with automatic scaling
-     * 
-     * @param values Pointer to array of values  
-     * @param size Number of values in the array
+     * @brief Create plaintext from values (bindings compatibility)
+     *
+     * @param values Pointer to array of values
+     * @param lenValues Number of values in the array
      * @return int Plaintext ID if successful, -1 if failed
      */
-    int CreatePlaintext(double* values, int size);
+    int CreatePlaintext(double* values, int lenValues);
 }

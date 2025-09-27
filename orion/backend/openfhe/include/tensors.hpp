@@ -6,143 +6,17 @@
 using namespace lbcrypto;
 
 /**
- * @brief Tensor management for OpenFHE plaintexts and ciphertexts
- * 
- * This module provides heap-based memory management for OpenFHE plaintext
- * and ciphertext objects, matching the functionality of the Lattigo backend.
- * It uses HeapAllocator instances to efficiently manage object lifetimes.
+ * @brief Tensor utilities for OpenFHE plaintexts and ciphertexts
+ *
+ * This module provides tensor-specific operations like scale management
+ * and value extraction. Heap management functions are now in minheap.hpp.
  */
 
-// Global heap allocators for plaintexts and ciphertexts
-extern HeapAllocator g_ptHeap;  // Plaintext heap
-extern HeapAllocator g_ctHeap;  // Ciphertext heap
+// Heap management functions moved to minheap.hpp
 
-/**
- * @brief Add a plaintext to the heap and return its ID
- * 
- * @param plaintext Plaintext object to store
- * @return int Unique ID for the stored plaintext
- */
-int PushPlaintext(const Plaintext& plaintext);
-
-/**
- * @brief Add a ciphertext to the heap and return its ID
- * 
- * @param ciphertext Ciphertext object to store
- * @return int Unique ID for the stored ciphertext
- */
-int PushCiphertext(const Ciphertext<DCRTPoly>& ciphertext);
-
-/**
- * @brief Retrieve a plaintext by its ID
- * 
- * @param plaintextID ID of the plaintext to retrieve
- * @return Plaintext& Reference to the stored plaintext
- * @throws std::runtime_error if ID not found
- */
-Plaintext& RetrievePlaintext(int plaintextID);
-
-/**
- * @brief Retrieve a ciphertext by its ID
- * 
- * @param ciphertextID ID of the ciphertext to retrieve
- * @return Ciphertext<DCRTPoly>& Reference to the stored ciphertext
- * @throws std::runtime_error if ID not found
- */
-Ciphertext<DCRTPoly>& RetrieveCiphertext(int ciphertextID);
-
-/**
- * @brief Get a shared pointer to a plaintext by its ID
- * 
- * @param plaintextID ID of the plaintext
- * @return std::shared_ptr<Plaintext> Shared pointer to the plaintext
- * @throws std::runtime_error if ID not found
- */
-std::shared_ptr<Plaintext> GetPlaintextPtr(int plaintextID);
-
-/**
- * @brief Get a shared pointer to a ciphertext by its ID
- * 
- * @param ciphertextID ID of the ciphertext
- * @return std::shared_ptr<Ciphertext<DCRTPoly>> Shared pointer to the ciphertext
- * @throws std::runtime_error if ID not found
- */
-std::shared_ptr<Ciphertext<DCRTPoly>> GetCiphertextPtr(int ciphertextID);
-
-/**
- * @brief Check if a plaintext exists with the given ID
- * 
- * @param plaintextID ID to check
- * @return true if plaintext exists, false otherwise
- */
-bool PlaintextExists(int plaintextID);
-
-/**
- * @brief Check if a ciphertext exists with the given ID
- * 
- * @param ciphertextID ID to check
- * @return true if ciphertext exists, false otherwise
- */
-bool CiphertextExists(int ciphertextID);
-
-/**
- * @brief Delete a plaintext and free its ID
- * 
- * @param plaintextID ID of the plaintext to delete
- * @return true if deletion successful, false if ID not found
- */
-bool DeletePlaintext(int plaintextID);
-
-/**
- * @brief Delete a ciphertext and free its ID
- * 
- * @param ciphertextID ID of the ciphertext to delete
- * @return true if deletion successful, false if ID not found
- */
-bool DeleteCiphertext(int ciphertextID);
-
-/**
- * @brief Get all active plaintext IDs
- * 
- * @return std::vector<int> Vector of all currently allocated plaintext IDs
- */
-std::vector<int> GetActivePlaintextIDs();
-
-/**
- * @brief Get all active ciphertext IDs
- * 
- * @return std::vector<int> Vector of all currently allocated ciphertext IDs
- */
-std::vector<int> GetActiveCiphertextIDs();
-
-/**
- * @brief Reset both tensor heaps, clearing all stored objects
- */
-void ResetTensorHeaps();
-
-/**
- * @brief Get statistics about tensor memory usage
- * 
- * @param plaintextCount Output parameter for number of plaintexts
- * @param ciphertextCount Output parameter for number of ciphertexts
- */
-void GetTensorStats(size_t& plaintextCount, size_t& ciphertextCount);
-
-// C interface functions for tensor management
+// C interface functions for tensor operations
 extern "C" {
-    /**
-     * @brief Delete a plaintext by ID (C interface)
-     *
-     * @param id Plaintext ID to delete
-     */
-    void DeletePlaintextC(int id);
-
-    /**
-     * @brief Delete a ciphertext by ID (C interface)
-     *
-     * @param id Ciphertext ID to delete
-     */
-    void DeleteCiphertextC(int id);
+    // Delete functions moved to minheap.hpp
 
     /**
      * @brief Get the scaling factor of a plaintext
@@ -178,11 +52,85 @@ extern "C" {
 
     /**
      * @brief Get values from a plaintext
-     * 
+     *
      * @param id Plaintext ID
      * @param output Output buffer for values
      * @param maxSize Maximum number of values to copy
      * @return int Number of values actually copied (0 if error)
      */
     int GetPlaintextValues(int id, double* output, int maxSize);
+
+    // Level Management Functions
+
+    /**
+     * @brief Get the level of a plaintext
+     *
+     * @param id Plaintext ID
+     * @return int Level (-1 if ID not found)
+     */
+    int GetPlaintextLevel(int id);
+
+    /**
+     * @brief Get the level of a ciphertext
+     *
+     * @param id Ciphertext ID
+     * @return int Level (-1 if ID not found)
+     */
+    int GetCiphertextLevel(int id);
+
+    /**
+     * @brief Get the number of slots in a plaintext
+     *
+     * @param id Plaintext ID
+     * @return int Number of slots (-1 if ID not found)
+     */
+    int GetPlaintextSlots(int id);
+
+    /**
+     * @brief Get the number of slots in a ciphertext
+     *
+     * @param id Ciphertext ID
+     * @return int Number of slots (-1 if ID not found)
+     */
+    int GetCiphertextSlots(int id);
+
+    /**
+     * @brief Get the degree of a ciphertext
+     *
+     * @param id Ciphertext ID
+     * @return int Degree of the ciphertext (-1 if ID not found)
+     */
+    int GetCiphertextDegree(int id);
+
+    // Memory and System Information Functions
+
+    /**
+     * @brief Get moduli chain information as a string
+     *
+     * @return const char* Moduli chain information
+     */
+    const char* GetModuliChain();
+
+    /**
+     * @brief Get the IDs of live plaintexts in memory
+     *
+     * @param count Output parameter for the number of live plaintexts
+     * @return int* Array of live plaintext IDs (caller must free)
+     */
+    int* GetLivePlaintexts(int* count);
+
+    /**
+     * @brief Get the IDs of live ciphertexts in memory
+     *
+     * @param count Output parameter for the number of live ciphertexts
+     * @return int* Array of live ciphertext IDs (caller must free)
+     */
+    int* GetLiveCiphertexts(int* count);
+
+    /**
+     * @brief Free an integer array allocated by C functions
+     *
+     * @param array Array to free
+     */
+    void FreeCIntArray(int* array);
 }

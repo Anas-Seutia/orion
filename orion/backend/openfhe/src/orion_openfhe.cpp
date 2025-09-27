@@ -1,6 +1,13 @@
 #include "orion_openfhe.hpp"
+#include "scheme.hpp"
+#include "encoder.hpp"
+#include "encryptor.hpp"
+#include "evaluator.hpp"
+#include "linear_transform.hpp"
+#include "minheap.hpp"
 #include <iostream>
 #include <algorithm>
+#include <cmath>
 
 // Global backend instance
 static std::unique_ptr<OrionOpenFHEBackend> g_backend;
@@ -10,8 +17,11 @@ bool OrionOpenFHEBackend::Initialize(int logN, const std::vector<int>& logQ, con
                                     const std::string& keysPath, const std::string& ioMode) {
     try {
         // Initialize the scheme
-        int ringTypeInt = (StringUtils::ToLowerCase(ringType) == "conjugate_invariant") ? 1 : 0;
-        bool schemeSuccess = g_scheme.Initialize(logN, logQ, logP, logScale, hammingWeight, 
+        std::string ringTypeLower = ringType;
+        std::transform(ringTypeLower.begin(), ringTypeLower.end(), ringTypeLower.begin(), ::tolower);
+        int ringTypeInt = (ringTypeLower == "conjugate_invariant") ? 1 : 0;
+
+        bool schemeSuccess = g_scheme.Initialize(logN, logQ, logP, logScale, hammingWeight,
                                                ringTypeInt, keysPath, ioMode);
         
         if (!schemeSuccess) {
@@ -33,16 +43,22 @@ bool OrionOpenFHEBackend::Initialize(int logN, const std::vector<int>& logQ, con
             return false;
         }
 
-        // Initialize encryptor and decryptor
+        // Initialize encryptor
         bool encryptorSuccess = g_encryptor.Initialize();
-        bool decryptorSuccess = g_decryptor.Initialize();
-        
-        if (!encryptorSuccess || !decryptorSuccess) {
-            std::cerr << "Failed to initialize encryptor/decryptor" << std::endl;
+
+        if (!encryptorSuccess) {
+            std::cerr << "Failed to initialize encryptor" << std::endl;
             return false;
         }
 
-        // Generate power-of-two rotation keys
+        // Initialize evaluator
+        bool evaluatorSuccess = g_evaluator.Initialize();
+        if (!evaluatorSuccess) {
+            std::cerr << "Failed to initialize evaluator" << std::endl;
+            return false;
+        }
+
+        // Generate power-of-two rotation keys (commonly used rotations)
         g_scheme.GeneratePowerOfTwoRotationKeys();
 
         initialized = true;
@@ -52,34 +68,6 @@ bool OrionOpenFHEBackend::Initialize(int logN, const std::vector<int>& logQ, con
         std::cerr << "Backend initialization failed: " << e.what() << std::endl;
         initialized = false;
         return false;
-    }
-}
-
-int OrionOpenFHEBackend::EncodeAndEncrypt(const std::vector<double>& values) {
-    if (!initialized) {
-        std::cerr << "Backend not initialized" << std::endl;
-        return -1;
-    }
-
-    try {
-        return g_encryptor.EncryptValues(values);
-    } catch (const std::exception& e) {
-        std::cerr << "EncodeAndEncrypt failed: " << e.what() << std::endl;
-        return -1;
-    }
-}
-
-std::vector<double> OrionOpenFHEBackend::DecryptAndDecode(int ciphertextID) {
-    if (!initialized) {
-        std::cerr << "Backend not initialized" << std::endl;
-        return std::vector<double>();
-    }
-
-    try {
-        return g_encryptor.DecryptValues(ciphertextID);
-    } catch (const std::exception& e) {
-        std::cerr << "DecryptAndDecode failed: " << e.what() << std::endl;
-        return std::vector<double>();
     }
 }
 
@@ -114,199 +102,30 @@ bool OrionOpenFHEBackend::DeleteLinearTransform(int transformID) {
     return ::DeleteLinearTransform(transformID);
 }
 
-int OrionOpenFHEBackend::Add(int ct1ID, int ct2ID) {
-    if (!initialized) return -1;
-
-    try {
-        if (!CiphertextExists(ct1ID) || !CiphertextExists(ct2ID)) {
-            std::cerr << "One or both ciphertext IDs not found" << std::endl;
-            return -1;
-        }
-
-        auto& ct1 = RetrieveCiphertext(ct1ID);
-        auto& ct2 = RetrieveCiphertext(ct2ID);
-
-        auto result = g_scheme.context->EvalAdd(ct1, ct2);
-        return PushCiphertext(result);
-
-    } catch (const std::exception& e) {
-        std::cerr << "Add failed: " << e.what() << std::endl;
-        return -1;
-    }
-}
-
-int OrionOpenFHEBackend::AddPlain(int ctID, int ptID) {
-    if (!initialized) return -1;
-
-    try {
-        if (!CiphertextExists(ctID) || !PlaintextExists(ptID)) {
-            std::cerr << "Ciphertext or plaintext ID not found" << std::endl;
-            return -1;
-        }
-
-        auto& ct = RetrieveCiphertext(ctID);
-        auto& pt = RetrievePlaintext(ptID);
-
-        auto result = g_scheme.context->EvalAdd(ct, pt);
-        return PushCiphertext(result);
-
-    } catch (const std::exception& e) {
-        std::cerr << "AddPlain failed: " << e.what() << std::endl;
-        return -1;
-    }
-}
-
-int OrionOpenFHEBackend::Multiply(int ct1ID, int ct2ID) {
-    if (!initialized) return -1;
-
-    try {
-        if (!CiphertextExists(ct1ID) || !CiphertextExists(ct2ID)) {
-            std::cerr << "One or both ciphertext IDs not found" << std::endl;
-            return -1;
-        }
-
-        auto& ct1 = RetrieveCiphertext(ct1ID);
-        auto& ct2 = RetrieveCiphertext(ct2ID);
-
-        auto result = g_scheme.context->EvalMult(ct1, ct2);
-        g_scheme.context->RescaleInPlace(result);
-        
-        return PushCiphertext(result);
-
-    } catch (const std::exception& e) {
-        std::cerr << "Multiply failed: " << e.what() << std::endl;
-        return -1;
-    }
-}
-
-int OrionOpenFHEBackend::MultiplyPlain(int ctID, int ptID) {
-    if (!initialized) return -1;
-
-    try {
-        if (!CiphertextExists(ctID) || !PlaintextExists(ptID)) {
-            std::cerr << "Ciphertext or plaintext ID not found" << std::endl;
-            return -1;
-        }
-
-        auto& ct = RetrieveCiphertext(ctID);
-        auto& pt = RetrievePlaintext(ptID);
-
-        auto result = g_scheme.context->EvalMult(ct, pt);
-        g_scheme.context->RescaleInPlace(result);
-        
-        return PushCiphertext(result);
-
-    } catch (const std::exception& e) {
-        std::cerr << "MultiplyPlain failed: " << e.what() << std::endl;
-        return -1;
-    }
-}
-
-int OrionOpenFHEBackend::Rotate(int ctID, int steps) {
-    if (!initialized) return -1;
-
-    try {
-        if (!CiphertextExists(ctID)) {
-            std::cerr << "Ciphertext ID " << ctID << " not found" << std::endl;
-            return -1;
-        }
-
-        // Ensure rotation key exists
-        g_scheme.GenerateRotationKey(steps);
-
-        auto& ct = RetrieveCiphertext(ctID);
-        auto result = g_scheme.context->EvalRotate(ct, steps);
-        
-        return PushCiphertext(result);
-
-    } catch (const std::exception& e) {
-        std::cerr << "Rotate failed: " << e.what() << std::endl;
-        return -1;
-    }
-}
-
-int OrionOpenFHEBackend::Rescale(int ctID) {
-    if (!initialized) return -1;
-
-    try {
-        if (!CiphertextExists(ctID)) {
-            std::cerr << "Ciphertext ID " << ctID << " not found" << std::endl;
-            return -1;
-        }
-
-        auto& ct = RetrieveCiphertext(ctID);
-        auto result = g_scheme.context->Rescale(ct);
-        
-        return PushCiphertext(result);
-
-    } catch (const std::exception& e) {
-        std::cerr << "Rescale failed: " << e.what() << std::endl;
-        return -1;
-    }
-}
+// Evaluator functions moved to evaluator.cpp
 
 void OrionOpenFHEBackend::CleanUp() {
     if (initialized) {
-        // Reset linear transformation heap
-        ResetLinearTransformHeap();
-        
+        // Reset heaps
+        ResetTensorHeaps();
+        g_ltHeap.Reset();
+
+        g_evaluator.CleanUp();
         g_encryptor.CleanUp();
-        g_decryptor.CleanUp();
         g_encoder.CleanUp();
         g_scheme.CleanUp();
-        
+
         initialized = false;
     }
 }
 
 std::string OrionOpenFHEBackend::GetStats() const {
-    return DebugUtils::GetMemoryStats();
+    // Simple memory stats without external dependencies
+    return "Backend initialized: " + std::string(initialized ? "true" : "false");
 }
 
-// C interface implementations
+// C interface implementations for non-evaluator functions
 extern "C" {
-    int Add(int ct1ID, int ct2ID) {
-        if (g_backend) {
-            return g_backend->Add(ct1ID, ct2ID);
-        }
-        return -1;
-    }
-
-    int AddPlain(int ctID, int ptID) {
-        if (g_backend) {
-            return g_backend->AddPlain(ctID, ptID);
-        }
-        return -1;
-    }
-
-    int Multiply(int ct1ID, int ct2ID) {
-        if (g_backend) {
-            return g_backend->Multiply(ct1ID, ct2ID);
-        }
-        return -1;
-    }
-
-    int MultiplyPlain(int ctID, int ptID) {
-        if (g_backend) {
-            return g_backend->MultiplyPlain(ctID, ptID);
-        }
-        return -1;
-    }
-
-    int Rotate(int ctID, int steps) {
-        if (g_backend) {
-            return g_backend->Rotate(ctID, steps);
-        }
-        return -1;
-    }
-
-    int Rescale(int ctID) {
-        if (g_backend) {
-            return g_backend->Rescale(ctID);
-        }
-        return -1;
-    }
-
     int CreateLinearTransform(double* transform, int size) {
         if (!g_backend || !transform || size <= 0) {
             return -1;
@@ -323,6 +142,7 @@ extern "C" {
         }
         return -1;
     }
+
 }
 
 // Backend management functions (for the updated NewScheme/DeleteScheme)
@@ -360,9 +180,9 @@ extern "C" {
                 logPVec.assign(logP, logP + logPSize);
             }
 
-            std::string ringTypeStr = StringUtils::SafeCStringToString(ringType, "standard");
-            std::string keysPathStr = StringUtils::SafeCStringToString(keysPath, "");
-            std::string ioModeStr = StringUtils::SafeCStringToString(ioMode, "memory");
+            std::string ringTypeStr = ringType ? std::string(ringType) : "standard";
+            std::string keysPathStr = keysPath ? std::string(keysPath) : "";
+            std::string ioModeStr = ioMode ? std::string(ioMode) : "memory";
 
             bool success = g_backend->Initialize(logN, logQVec, logPVec, logScale, 
                                                hammingWeight, ringTypeStr, keysPathStr, ioModeStr);

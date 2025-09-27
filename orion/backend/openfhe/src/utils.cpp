@@ -17,6 +17,42 @@ namespace ArrayUtils {
         unsigned char* bytePtr = static_cast<unsigned char*>(dataPtr);
         return std::vector<unsigned char>(bytePtr, bytePtr + length);
     }
+
+    // Template functions are defined in the header file
+}
+
+namespace TypeConversion {
+    int convertCIntToInt(int v) {
+        return v;
+    }
+
+    float convertCFloatToFloat(float v) {
+        return v;
+    }
+
+    double convertFloat64ToCDouble(double v) {
+        return v;
+    }
+
+    int convertIntToCInt(int v) {
+        return v;
+    }
+
+    unsigned long convertULongtoCULong(uint64_t v) {
+        return static_cast<unsigned long>(v);
+    }
+
+    int convertULongtoInt(uint64_t v) {
+        return static_cast<int>(v);
+    }
+
+    char convertByteToCChar(unsigned char b) {
+        return static_cast<char>(b);
+    }
+}
+
+namespace MapUtils {
+    // Template functions are defined in the header file
 }
 
 namespace DebugUtils {
@@ -37,22 +73,22 @@ namespace DebugUtils {
                 try {
                     Plaintext plaintext;
                     g_scheme.context->Decrypt(g_scheme.secretKey, ciphertext, &plaintext);
-                    
+
                     std::vector<double> values = plaintext->GetRealPackedValue();
                     int printCount = std::min(maxElements, static_cast<int>(values.size()));
-                    
+
                     std::cout << "First " << printCount << " decrypted values: ";
                     for (int i = 0; i < printCount; ++i) {
                         std::cout << values[i];
                         if (i < printCount - 1) std::cout << ", ";
                     }
                     std::cout << std::endl;
-                    
+
                 } catch (const std::exception& e) {
                     std::cout << "Could not decrypt for debugging: " << e.what() << std::endl;
                 }
             }
-            
+
         } catch (const std::exception& e) {
             std::cout << "Error printing ciphertext: " << e.what() << std::endl;
         }
@@ -71,14 +107,14 @@ namespace DebugUtils {
 
             std::vector<double> values = plaintext->GetRealPackedValue();
             int printCount = std::min(maxElements, static_cast<int>(values.size()));
-            
+
             std::cout << "First " << printCount << " values: ";
             for (int i = 0; i < printCount; ++i) {
                 std::cout << values[i];
                 if (i < printCount - 1) std::cout << ", ";
             }
             std::cout << std::endl;
-            
+
         } catch (const std::exception& e) {
             std::cout << "Error printing plaintext: " << e.what() << std::endl;
         }
@@ -86,7 +122,7 @@ namespace DebugUtils {
 
     void PrintVector(const std::vector<double>& values, const std::string& label, int maxElements) {
         std::cout << "=== " << label << " ===" << std::endl;
-        
+
         if (values.empty()) {
             std::cout << "Vector is empty" << std::endl;
             return;
@@ -94,30 +130,30 @@ namespace DebugUtils {
 
         int printCount = std::min(maxElements, static_cast<int>(values.size()));
         std::cout << "Size: " << values.size() << ", showing first " << printCount << " values: ";
-        
+
         for (int i = 0; i < printCount; ++i) {
             std::cout << values[i];
             if (i < printCount - 1) std::cout << ", ";
         }
-        
+
         if (values.size() > static_cast<size_t>(maxElements)) {
             std::cout << "... (and " << (values.size() - maxElements) << " more)";
         }
-        
+
         std::cout << std::endl;
     }
 
     std::string GetMemoryStats() {
         std::stringstream ss;
-        
+
         size_t plaintextCount, ciphertextCount;
         GetTensorStats(plaintextCount, ciphertextCount);
-        
+
         ss << "Memory Statistics:" << std::endl;
         ss << "  Active Plaintexts: " << plaintextCount << std::endl;
         ss << "  Active Ciphertexts: " << ciphertextCount << std::endl;
         ss << "  Total Objects: " << (plaintextCount + ciphertextCount) << std::endl;
-        
+
         return ss.str();
     }
 }
@@ -136,7 +172,7 @@ namespace StringUtils {
 
     bool IsValidRingType(const std::string& ringType) {
         std::string lower = ToLowerCase(ringType);
-        return (lower == "standard" || lower == "conjugate_invariant" || 
+        return (lower == "standard" || lower == "conjugate_invariant" ||
                 lower == "conjugateinvariant" || lower == "");
     }
 }
@@ -144,25 +180,25 @@ namespace StringUtils {
 namespace MathUtils {
     uint32_t NextPowerOfTwo(uint32_t n) {
         if (n == 0) return 1;
-        
+
         --n;
         n |= n >> 1;
         n |= n >> 2;
         n |= n >> 4;
         n |= n >> 8;
         n |= n >> 16;
-        
+
         return n + 1;
     }
 
     int Log2(uint32_t n) {
         if (n == 0) return -1;
-        
+
         int log = 0;
         while (n >>= 1) {
             ++log;
         }
-        
+
         return log;
     }
 
@@ -174,7 +210,7 @@ namespace MathUtils {
         if (values.empty()) {
             return 0.0;
         }
-        
+
         return *std::min_element(values.begin(), values.end());
     }
 
@@ -182,7 +218,7 @@ namespace MathUtils {
         if (values.empty()) {
             return 0.0;
         }
-        
+
         return *std::max_element(values.begin(), values.end());
     }
 
@@ -190,7 +226,7 @@ namespace MathUtils {
         if (values.empty()) {
             return 0.0;
         }
-        
+
         double sum = std::accumulate(values.begin(), values.end(), 0.0);
         return sum / values.size();
     }
@@ -204,15 +240,5 @@ extern "C" {
         }
     }
 
-    void GetMemoryUsage(int* plaintextCount, int* ciphertextCount) {
-        if (!plaintextCount || !ciphertextCount) {
-            return;
-        }
-
-        size_t ptCount, ctCount;
-        GetTensorStats(ptCount, ctCount);
-        
-        *plaintextCount = static_cast<int>(ptCount);
-        *ciphertextCount = static_cast<int>(ctCount);
-    }
+    // GetMemoryUsage is defined in minheap.cpp, not here
 }

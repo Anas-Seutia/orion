@@ -58,7 +58,7 @@ def build_lattigo(root_dir):
 def build_openfhe(root_dir):
     """Builds the OpenFHE C++ library using CMake and Make."""
     print("\n=== Building OpenFHE C++ library ===")
-    
+
     # 1. Set up paths for OpenFHE
     openfhe_source_dir = root_dir / "orion" / "backend" / "openfhe" / "openfhe-development"
     openfhe_build_dir = openfhe_source_dir / "build"
@@ -88,7 +88,7 @@ def build_openfhe(root_dir):
     ]
     try:
         print(f"Running CMake configure for OpenFHE: {' '.join(str(c) for c in cmake_configure_cmd)}")
-        subprocess.run(cmake_configure_cmd, cwd=str(openfhe_build_dir), env=env, check=True, capture_output=True, text=True)
+        subprocess.run(cmake_configure_cmd, cwd=str(openfhe_build_dir), env=env, check=True)
         print("OpenFHE CMake configuration successful.")
     except subprocess.CalledProcessError as e:
         print(f"OpenFHE CMake configure failed with exit code {e.returncode}")
@@ -101,7 +101,7 @@ def build_openfhe(root_dir):
     ]
     try:
         print(f"Running Make build for OpenFHE: {' '.join(str(c) for c in make_build_cmd)}")
-        subprocess.run(make_build_cmd, cwd=str(openfhe_build_dir), env=env, check=True, capture_output=True, text=True)
+        subprocess.run(make_build_cmd, cwd=str(openfhe_build_dir), env=env, check=True)
         print("OpenFHE Make build successful.")
     except subprocess.CalledProcessError as e:
         print(f"OpenFHE Make build failed with exit code {e.returncode}")
@@ -114,15 +114,64 @@ def build_openfhe(root_dir):
     ]
     try:
         print(f"Running Make install for OpenFHE: {' '.join(str(c) for c in make_install_cmd)}")
-        subprocess.run(make_install_cmd, cwd=str(openfhe_build_dir), env=env, check=True, capture_output=True, text=True)
+        subprocess.run(make_install_cmd, cwd=str(openfhe_build_dir), env=env, check=True)
         print("OpenFHE Make install successful.")
     except subprocess.CalledProcessError as e:
         print(f"OpenFHE Make install failed with exit code {e.returncode}")
         sys.exit(1)
 
+
+def build_openfhe_backend(root_dir):
+    """Builds the OpenFHE backend modules using CMake."""
+    print("\n=== Building OpenFHE backend modules ===")
+
+    # Set up paths for the backend
+    backend_dir = root_dir / "orion" / "backend" / "openfhe"
+    backend_build_dir = backend_dir / "build"
+
+    # Check if the backend directory exists
+    if not backend_dir.is_dir():
+        print(f"OpenFHE backend directory not found: {backend_dir}")
+        sys.exit(1)
+
+    # Create build directory
+    backend_build_dir.mkdir(exist_ok=True)
+
+    # CMake configuration for backend modules
+    env = os.environ.copy()
+
+    cmake_configure_cmd = [
+        "cmake",
+        "..",
+        "-DCMAKE_BUILD_TYPE=Release"
+    ]
+
+    try:
+        print(f"Running CMake configure for OpenFHE backend: {' '.join(str(c) for c in cmake_configure_cmd)}")
+        subprocess.run(cmake_configure_cmd, cwd=str(backend_build_dir), env=env, check=True, capture_output=True, text=True)
+        print("OpenFHE backend CMake configuration successful.")
+    except subprocess.CalledProcessError as e:
+        print(f"OpenFHE backend CMake configure failed with exit code {e.returncode}")
+        sys.exit(1)
+
+    # Make build for backend modules
+    make_build_cmd = [
+        "make",
+        "-j", str(os.cpu_count() or 2)
+    ]
+
+    try:
+        print(f"Running Make build for OpenFHE backend: {' '.join(str(c) for c in make_build_cmd)}")
+        subprocess.run(make_build_cmd, cwd=str(backend_build_dir), env=env, check=True, capture_output=True, text=True)
+        print("OpenFHE backend Make build successful.")
+    except subprocess.CalledProcessError as e:
+        print(f"OpenFHE backend Make build failed with exit code {e.returncode}")
+        sys.exit(1)
+
 def build(setup_kwargs=None):
     root_dir = Path(__file__).parent.parent
     build_openfhe(root_dir)
+    build_openfhe_backend(root_dir)
     build_lattigo(root_dir)
 
     # Return setup_kwargs for Poetry

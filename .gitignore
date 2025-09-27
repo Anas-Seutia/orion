@@ -211,3 +211,6 @@ go.work.sum
 
 # env file
 .env
+
+# claude momory file
+CLAUDE.md

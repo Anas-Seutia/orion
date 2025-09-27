@@ -10,6 +10,7 @@ from torch.utils.data import DataLoader, RandomSampler
 from orion.nn.module import Module
 from orion.nn.linear import LinearTransform
 from orion.backend.lattigo import bindings as lgo
+from orion.backend.openfhe import bindings as ofhe
 from orion.backend.python import (
     parameters, 
     key_generator,
@@ -92,7 +93,10 @@ class Scheme:
             py_lattigo = lgo.LattigoLibrary()
             py_lattigo.setup_bindings(params)
             return py_lattigo
-        elif backend in ("heaan", "openfhe"):
+        elif backend == "openfhe":
+            py_openfhe = ofhe.OpenFHEBackend(params)
+            return py_openfhe
+        elif backend == "heaan":
             raise ValueError(f"Backend {backend} not yet supported.")
         else:
             raise ValueError(
